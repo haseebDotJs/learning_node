@@ -1,6 +1,8 @@
 const express = require("express");
 const router = express.Router();
 
+const bcrypt = require("bcrypt");
+
 // MODELS
 const UserModel = require("../models/user");
 
@@ -18,13 +20,22 @@ router
   })
   .post(async (req, res) => {
     try {
-      const user = new UserModel(req.body || {});
+      // CHECK IF EMAIL ALREADY EXISTS
+      const userDetails = req.body || {};
+      const isEmailExists = await UserModel.find({ email: userDetails?.email });
+
+      if (isEmailExists?.length) {
+        return res.status(409).send("Email already exists");
+      }
+
+      const user = new UserModel(userDetails);
 
       // SAVING USER IN DB
       await user.save();
 
-      res.status(201).send(req.body);
+      res.status(201).send(user);
     } catch (error) {
+      console.log("___ERR", error);
       res.status(400).send(error);
     }
   });
@@ -47,6 +58,7 @@ router
 
       res.send(userFoundWithId);
     } catch (error) {
+      console.log("___error", error);
       res.status(400).send(error);
     }
   })
@@ -65,26 +77,23 @@ router
 
     try {
       const _id = req.params.id;
+      const user = await UserModel.findById(_id);
 
-      const updateField = req.body;
-
-      const updatedUser = await UserModel.findByIdAndUpdate(
-        { _id },
-        updateField,
-        {
-          new: true,
-          runValidators: true,
-        }
+      currentKeys.forEach(
+        (updatedKey) => (user[updatedKey] = req.body[updatedKey])
       );
 
-      if (!updatedUser) {
+      await user.save();
+
+      if (!user) {
         return res
           .status(404)
           .send({ message: "No user found with the given id" });
       }
 
-      res.send(updatedUser);
+      res.send(user);
     } catch (error) {
+      console.log("__err", error);
       res.status(400).send(error);
     }
   })

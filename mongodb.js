@@ -18,9 +18,7 @@ async function run() {
     const connectedClient = await client.connect();
 
     const db = connectedClient.db(databaseName);
-
-    const usersCollection = db.collection("users");
-    const tasksCollection = db.collection("tasks");
+ console.log("Mongo db connected successfully")
 
     // const doc = { name: "Haseeb", age: 20, _id: 1 };
 
@@ -73,8 +71,6 @@ async function run() {
     // const result = await tasksCollection.deleteOne({
     //   _id: new ObjectId("656f85ee0987c5fe05b4d490"),
     // });
-    const result = await usersCollection.deleteMany({ age: 20 });
-    console.log("_____result", result);
   } catch (e) {
     console.log("Mongodb failed to connect");
   } finally {

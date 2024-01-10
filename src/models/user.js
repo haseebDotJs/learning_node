@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 const validator = require("validator");
 const bcrypt = require("bcrypt");
-
+const jwt = require("jsonwebtoken");
 const userSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -18,6 +18,7 @@ const userSchema = new mongoose.Schema({
   },
   email: {
     type: String,
+    unique: true,
     required: true,
     lowercase: true,
     trim: true,
@@ -38,8 +39,53 @@ const userSchema = new mongoose.Schema({
       }
     },
   },
+  tokens: [
+    {
+      token: {
+        type: String,
+        required: true,
+      },
+    },
+  ],
 });
 
+userSchema.statics.findCredentials = async function (email, password) {
+  const user = await User.findOne({ email: email });
+
+  if (!user) {
+    return res.status(400).send({ error: "User not found" });
+  }
+
+  const isPasswordMatch = await bcrypt.compare(password, user.password);
+
+  if (!isPasswordMatch) {
+    return res.status(400).send({ error: "User not found" });
+  }
+
+  return user;
+};
+
+userSchema.methods.toJSON = function () {
+  const user = this;
+  const userProfile = user.toObject();
+
+  delete userProfile.password;
+  delete userProfile.tokens;
+
+  return userProfile;
+};
+
+userSchema.methods.generateAuthToken = async function () {
+  const user = this;
+
+  const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET);
+
+  user.tokens = user.tokens.concat({ token });
+
+  await user.save();
+
+  return token;
+};
 userSchema.pre("save", async function (next) {
   const user = this;
 
@@ -50,6 +96,7 @@ userSchema.pre("save", async function (next) {
 
   next();
 });
+
 const User = mongoose.model("User", userSchema);
 
 module.exports = User;
